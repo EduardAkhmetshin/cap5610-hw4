@@ -78,7 +78,8 @@ def distance(instance1, instance2):
         return float("inf")
     sumOfSquares = 0
     for i in range(1, len(instance1)):
-        sumOfSquares += (instance1[i] - instance2[i])**2
+        # sumOfSquares += (instance1[i] - instance2[i])**2
+        sumOfSquares += abs(instance1[i] - instance2[i])
     return sumOfSquares
 
 def meanInstance(name, instanceList):
@@ -260,7 +261,7 @@ def prepareWindow(instances):
     height = 500
     margin = 50
     root = Tk()
-    canvas = Canvas(root, width=width, height=height, background="white")
+    canvas = Canvas(root, width=width, height=height, background="grey")
     canvas.pack()
     canvas.data = {}
     canvas.data["margin"] = margin
