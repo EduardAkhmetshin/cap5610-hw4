@@ -2,6 +2,10 @@ import random
 import time
 from tkinter import *
 
+import numpy as np
+from scipy import spatial
+
+
 ######################################################################
 # This section contains functions for loading CSV (comma separated values)
 # files and convert them to a dataset of instances.
@@ -73,14 +77,36 @@ def isValidNumberString(s):
 # using the k-means algorithm.
 ######################################################################
 
-def distance(instance1, instance2):
-    if instance1 == None or instance2 == None:
-        return float("inf")
-    sumOfSquares = 0
+def euclidean_distance(instance1, instance2):
+    res = 0
     for i in range(1, len(instance1)):
-        # sumOfSquares += (instance1[i] - instance2[i])**2
-        sumOfSquares += abs(instance1[i] - instance2[i])
-    return sumOfSquares
+        res += (instance1[i] - instance2[i]) ** 2
+    return np.sqrt(res)
+
+def manhattan_distance(instance1, instance2):
+    res = 0
+    for i in range(1, len(instance1)):
+        res += abs(instance1[i] - instance2[i])
+    return res
+
+def cosine_distance(instance1, instance2):
+    return spatial.distance.cosine(instance1[1:], instance2[1:])
+
+def jaccard_distance(instance1, instance2):
+    numerator = 0
+    denominator = 0
+    for i in range(1, len(instance1)):
+        numerator += min(instance1[i], instance2[i])
+        denominator += max(instance1[i], instance2[i])
+    return 1 - (numerator / denominator)
+
+def distance(instance1, instance2):
+    if instance1 is None or instance2 is None:
+        return float("inf")
+    # return euclidean_distance(instance1, instance2)
+    # return manhattan_distance(instance1, instance2)
+    # return cosine_distance(instance1, instance2)
+    return jaccard_distance(instance1, instance2)
 
 def meanInstance(name, instanceList):
     numInstances = len(instanceList)
@@ -156,6 +182,7 @@ def kmeans(instances, k, animation=False, initCentroids=None):
             paintClusters2D(canvas, clusters, centroids,
                             "Update %d, withinss %.1f" % (iteration, withinss))
             time.sleep(delay)
+        print(prevCentroids, centroids)
     result["clusters"] = clusters
     result["centroids"] = centroids
     result["withinss"] = withinss
@@ -335,15 +362,48 @@ def paintClusters2D(canvas, clusters, centroids, title=""):
     canvas.create_text(width/2, 20, text=title, font="Sans 14")
     canvas.update()
 
+def sse(clustering):
+    res = 0
+    for cluster, centroid in zip(clustering['clusters'], clustering['centroids']):
+        for point in cluster:
+            res += distance(point, centroid) ** 2
+    return res
+
+def confusion(clustering, classes):
+    confusion_matrix = {}
+    for cluster in clustering['clusters']:
+        classes_count = {}
+        for point in cluster:
+            cl = classes[point]
+            classes_count[cl] = classes_count.get(cl, 0) + 1
+        predicted_class = max(classes_count, key=classes_count.get)
+        print(classes_count, predicted_class)
+        for point in cluster:
+            cl = classes[point]
+            confusion_matrix[predicted_class, cl] = confusion_matrix.get((predicted_class, cl), 0) + 1
+        print(confusion_matrix)
+    return confusion_matrix
 
 ######################################################################
 # Test code
 ######################################################################
 
-dataset = loadCSV("./teams.csv")
-showDataset2D(dataset)
-clustering = kmeans(dataset, 2, True)
-printTable(clustering["centroids"])
+# dataset = loadCSV("./teams.csv")
+# showDataset2D(dataset)
+# clustering = kmeans(dataset, 2, True)
+# # clustering = kmeans(dataset, 2, True, [('centroid0', 3.0, 2.0), ('centroid1', 4.0, 8.0)])
+# printTable(clustering["centroids"])
+
+dataset = loadCSV("./iris.csv")
+X = [entry[:-1] for entry in dataset]
+y = [entry[-1] for entry in dataset]
+classes = {entry[0]: entry[1] for entry in zip(X, y)}
+clustering = kmeans(X, 3, False)
+print(clustering)
+
+print('SSE', sse(clustering))
+
+print(confusion(clustering, classes))
 
 import pdb
 
